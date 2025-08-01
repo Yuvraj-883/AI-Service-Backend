@@ -1,15 +1,25 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { ApiError } = require('../utils/errorHandler');
 const config = require('../../config');
+const { parse } = require('dotenv');
 
 // Initialize Google Generative AI client
 const genAI = new GoogleGenerativeAI(config.ai.apiKey);
 
-/**
- * Strip HTML tags from article description
- */
 function stripHtml(html) {
+  if (!html) return '';
   return html.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim();
+}
+
+/**
+ * Get the best available title and description from article object
+ */
+function extractArticleContent(article) {
+  const title = article.title || article.sTitle || article.shortTitle || 'Untitled';
+  const description = article.description || article.sDescription  || '';
+  const content =  article.sContent || article.content || '';
+  
+  return { title, description, content };
 }
 
 /**
@@ -25,7 +35,17 @@ const summarizeSingleArticle = async (article, language = 'english', retryCount 
       }
     });
 
-    const cleanDescription = stripHtml(article.description || article.sDescription || '');
+    const { title, description, content } = extractArticleContent(article);
+    let cleanDescription = stripHtml(description);
+
+    if (content) {
+      const cleanedContent = stripHtml(content);
+      cleanDescription = cleanedContent;
+    }
+
+    if (!cleanDescription || cleanDescription.length < 10) {
+      throw new Error('Article description is too short or missing');
+    }
 
     let prompt;
     if (language === 'hindi') {
@@ -40,7 +60,8 @@ const summarizeSingleArticle = async (article, language = 'english', retryCount 
   "summary": "<हिंदी में 50-60 शब्दों का सारांश>"
 }
 
-विवरण: ${cleanDescription} ${article.title ? `शीर्षक: ${article.title}` : (article.sTitle || '')}
+विवरण: ${cleanDescription}
+शीर्षक: ${title}
 
 केवल ऊपर के JSON प्रारूप में उत्तर दें।`;
     } else {
@@ -56,37 +77,47 @@ Instructions:
   "summary": "<50–60 word summary in English>"
 }
 
-Description: ${cleanDescription} ${article.title ? `Title: ${article.title}` : (article.sTitle || '')}
+Description: ${cleanDescription}
+Title: ${title}
 
 Now respond ONLY in the above JSON format.`;
     }
 
-    const result = await model.generateContent(prompt);
+    let result;
+    try {
+      result = await model.generateContent(prompt);
+      console.log(result.response);
+    } catch (error) {
+      console.log(error);
+    }
+
     const rawText = result.response.text().trim();
     console.log('🧪 Gemini raw output:', rawText);
 
     if (!rawText || rawText.length < 10) {
-      // throw new Error('Empty response from model');
-      return {}
+      return {
+        title: title,
+        summary: 'Summary not generated due to empty response from model.'
+      };
     }
 
     let cleanedText = rawText
-      .replace(/^```json\s*/i, '')
+      .replace(/^```json/i, '')
+      .replace(/^```/, '')
       .replace(/```$/, '')
-      .replace(/[“”]/g, '"')
-      .replace(/[‘’]/g, "'")
-      .replace(/\\"/g, '"')
       .trim();
-
-    console.log('🧹 Cleaned output:', cleanedText);
 
     let parsed;
 
     try {
       parsed = JSON.parse(cleanedText);
-      if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+      if (typeof parsed === 'string') {
+        parsed = JSON.parse(parsed); // handle double-stringified JSON
+      }
     } catch (err) {
-      const match = cleanedText.match(/"title"\s*:\s*"([^"]+)",\s*"summary"\s*:\s*"([^"]+)"/);
+      console.warn('❌ JSON.parse failed. Attempting regex fallback…');
+
+      const match = cleanedText.match(/"title"\s*:\s*"([^"]+)"\s*,\s*"summary"\s*:\s*"([^"]+)"/i);
       if (match) {
         parsed = {
           title: match[1],
@@ -97,39 +128,29 @@ Now respond ONLY in the above JSON format.`;
       }
     }
 
-    const summaries = Array.isArray(parsed) ? parsed[0] : parsed;
-
-    if (!summaries || !summaries.summary || typeof summaries.summary !== 'string' || summaries.summary.length < 10) {
-      throw new Error('Summary too short or missing');
-    }
-
-    console.log('✅ Final parsed summaries:', summaries);
-    return summaries;
+    return parsed;
 
   } catch (error) {
-    console.warn(`⚠️ Error on attempt ${retryCount + 1} for article "${article.title}":`, error.message);
+    console.warn(`⚠️ Error on attempt ${retryCount + 1} for article "${article.title || article.sTitle}":`, error.message);
 
     if (retryCount < 1) {
-      console.log(`🔁 Retrying summarization for "${article.title}"...`);
+      console.log(`🔁 Retrying summarization for "${article.title || article.sTitle}"...`);
       return summarizeSingleArticle(article, language, retryCount + 1);
     }
 
-    // Final fallback if retry also fails
     return {
-      title: article.title || 'Untitled',
+      title: article.title || article.sTitle || 'Untitled',
       summary: 'Summary not generated due to repeated model failure.'
     };
   }
 };
-
 
 /**
  * Summarize multiple articles
  */
 const summarizeArticles = async (articles, language = 'english') => {
   try {
-    
-    const summarizationPromises = articles.map(article =>
+    const summarizationPromises = articles.map(article => 
       summarizeSingleArticle(article, language)
     );
     const summarizedArticles = await Promise.all(summarizationPromises);
