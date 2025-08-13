@@ -12,11 +12,19 @@ const articleRoutes = require('./app/routes/articleRoutes');
 const app = express();
 const PORT = config.app.port;
 
+// --- THIS IS THE CRITICAL FIX ---
+// Tell Express that it's behind a proxy (Vercel) and to trust the X-Forwarded-For header.
+// This is required for express-rate-limit to work correctly on Vercel.
+app.set('trust proxy', 1);
+// --------------------------------
 
+// Security middleware 
 app.use(helmet());
 
+// Enable CORS for all origins, as you requested.
 app.use(cors());
 
+// Rate limiting middleware
 const limiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
   max: config.rateLimit.max,
@@ -24,13 +32,14 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Body parsing middleware
 app.use(bodyParser.json({ limit: config.performance?.maxPayloadSize || '1mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: config.performance?.maxPayloadSize || '1mb' }));
 
-
-
+// --- Application Routes ---
 app.use('/api/articles', articleRoutes);
 
+// Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
@@ -41,8 +50,9 @@ app.get('/health', (req, res) => {
   });
 });
 
+// --- Error Handling ---
 
-
+// 404 handler for routes that are not found
 app.use('*', (req, res) => {
   res.status(404).json({ 
     error: 'Route not found',
@@ -50,6 +60,7 @@ app.use('*', (req, res) => {
   });
 });
 
+// Global error handler to catch all other errors
 app.use((err, req, res, next) => {
   console.error('An unhandled error occurred:', err);
   
@@ -67,7 +78,9 @@ app.use((err, req, res, next) => {
 });
 
 
+// --- Server Initialization (Vercel Compatible) ---
 
+// Conditionally start the server only when executed directly
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`🚀 Server is running on port ${PORT}`);
@@ -82,4 +95,5 @@ if (require.main === module) {
   });
 }
 
+// Always export the app for serverless environments
 module.exports = app;
