@@ -2,12 +2,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { ApiError } = require('../utils/errorHandler');
 const config = require('../../config');
 
-// Initialize Google Generative AI client
 const genAI = new GoogleGenerativeAI(config.ai.apiKey);
-
-/**
- * --- Centralized Prompts for easy management and scalability ---
- */
 const PROMPTS = {
   hindi: (title, description) => `आप एक विशेषज्ञ समाचार संपादक हैं। आपको दिए गए शीर्षक और विवरण के आधार पर, एक आकर्षक शीर्षक और एक संक्षिप्त, सारगर्भित सारांश हिंदी में तैयार करना है।
 
@@ -52,17 +47,13 @@ const PROMPTS = {
 --- JSON Response ---`
 };
 
-/**
- * Helper to strip HTML tags from a string.
- */
+
 function stripHtml(html) {
   if (!html) return '';
   return html.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim();
 }
 
-/**
-* Get the best available title and description from article object
-*/
+
 function extractArticleContent(article) {
   const title = article.title || article.sTitle || article.shortTitle || 'Untitled';
   const description = article.description || article.sDescription  || '';
@@ -70,9 +61,7 @@ function extractArticleContent(article) {
   return { title, description, content };
 }
 
-/**
- * Attempts to parse a string that might be JSON, with fallbacks.
- */
+
 function _parseJsonWithFallback(rawText) {
   const cleanedText = rawText
     .replace(/^```json/i, '')
@@ -83,7 +72,7 @@ function _parseJsonWithFallback(rawText) {
   try {
     let parsed = JSON.parse(cleanedText);
     if (typeof parsed === 'string') {
-      parsed = JSON.parse(parsed); // Handle double-stringified JSON
+      parsed = JSON.parse(parsed); 
     }
     return parsed;
   } catch (err) {
@@ -92,14 +81,11 @@ function _parseJsonWithFallback(rawText) {
     if (match && match && match) {
       return { title: match.trim(), summary: match.trim() };
     }
-    // Final fallback if regex fails
     throw new Error('Failed to parse summary JSON from model response.');
   }
 }
 
-/**
- * Summarize a single article using Gemini
- */
+
 const summarizeSingleArticle = async (article, language = 'english', retryCount = 0) => {
   const { 
     maxRetries, 
@@ -131,7 +117,6 @@ const summarizeSingleArticle = async (article, language = 'english', retryCount 
       throw new Error(`Article content is too short (${cleanContent.length} chars) or missing.`);
     }
     
-    // --- ADDED: Truncate input to avoid exceeding API token limits ---
     const truncatedContent = cleanContent.substring(0, maxInputLength);
 
     const prompt = PROMPTS[language](title, truncatedContent);
@@ -142,7 +127,6 @@ const summarizeSingleArticle = async (article, language = 'english', retryCount 
     const result = await model.generateContent(prompt);
     const response = result.response;
 
-    // --- ADDED: More specific error handling for safety blocks ---
     if (!response || !response.text) {
       const finishReason = response?.promptFeedback?.blockReason || 'UNKNOWN_REASON';
       const safetyRatings = response?.promptFeedback?.safetyRatings || [];
@@ -165,7 +149,6 @@ const summarizeSingleArticle = async (article, language = 'english', retryCount 
 
     if (retryCount < maxRetries) {
       console.log(`🔁 Retrying summarization for "${articleTitle}" after ${retryDelay}ms...`);
-      // --- ADDED: Wait for a short delay before retrying ---
       await new Promise(resolve => setTimeout(resolve, retryDelay));
       return summarizeSingleArticle(article, language, retryCount + 1);
     }
@@ -177,18 +160,14 @@ const summarizeSingleArticle = async (article, language = 'english', retryCount 
   }
 };
 
-/**
- * Summarize multiple articles
- */
+
 const summarizeArticles = async (articles, language = 'english') => {
   try {
-    // Using Promise.allSettled is safer for batch jobs as it won't fail the entire batch if one article fails.
     const summarizationPromises = articles.map(article => 
       summarizeSingleArticle(article, language)
     );
     const results = await Promise.allSettled(summarizationPromises);
     
-    // Filter out failed promises if necessary, or map them to a default error state.
     const summarizedArticles = results.map((result, index) => {
       if (result.status === 'fulfilled') {
         return result.value;
@@ -208,9 +187,6 @@ const summarizeArticles = async (articles, language = 'english') => {
   }
 };
 
-/**
- * Validate Google API key
- */
 const validateApiKey = async () => {
   try {
     if (!config.ai.apiKey) {
@@ -220,7 +196,6 @@ const validateApiKey = async () => {
     await model.generateContent("Hello");
     return true;
   } catch (error) {
-    // Log the actual error for debugging, but return a generic failure.
     console.error('Google API key validation failed:', error.message);
     return false;
   }
