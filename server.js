@@ -15,7 +15,7 @@ const PORT = config.app.port;
 
 app.use(helmet());
 
-app.use(cors(config.cors));
+app.use(cors());
 
 const limiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
@@ -24,8 +24,8 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-app.use(bodyParser.json({ limit: config.performance?.maxPayloadSize || '10mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: config.performance?.maxPayloadSize || '10mb' }));
+app.use(bodyParser.json({ limit: config.performance?.maxPayloadSize || '1mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: config.performance?.maxPayloadSize || '1mb' }));
 
 
 
