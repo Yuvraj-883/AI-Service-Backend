@@ -13,7 +13,7 @@ const articleRoutes = require('./app/routes/articleRoutes');
 const app = express();
 const PORT = config.app.port;
 
-// Security middleware
+// Security middleware 
 app.use(helmet());
 app.use(cors())
 // Rate limiting
