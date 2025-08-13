@@ -15,7 +15,7 @@ const PORT = config.app.port;
 
 // Security middleware
 app.use(helmet());
-
+app.use(cors())
 // Rate limiting
 const limiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
