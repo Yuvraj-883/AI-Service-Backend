@@ -6,7 +6,7 @@ const bodyParser = require('body-parser');
 require('dotenv').config();
 
 // Load configuration
-const config = require('./config');
+const config = require('./config'); 
 
 const articleRoutes = require('./app/routes/articleRoutes');
 
