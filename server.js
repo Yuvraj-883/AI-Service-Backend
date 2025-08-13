@@ -5,7 +5,6 @@ const rateLimit = require('express-rate-limit');
 const bodyParser = require('body-parser');
 require('dotenv').config();
 
-// Load configuration
 const config = require('./config'); 
 
 const articleRoutes = require('./app/routes/articleRoutes');
@@ -13,10 +12,11 @@ const articleRoutes = require('./app/routes/articleRoutes');
 const app = express();
 const PORT = config.app.port;
 
-// Security middleware 
+
 app.use(helmet());
-app.use(cors())
-// Rate limiting
+
+app.use(cors(config.cors));
+
 const limiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
   max: config.rateLimit.max,
@@ -24,17 +24,13 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// CORS configuration
-app.use(cors(config.cors));
-
-// Body parsing middleware
 app.use(bodyParser.json({ limit: config.performance?.maxPayloadSize || '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: config.performance?.maxPayloadSize || '10mb' }));
 
-// Routes
+
+
 app.use('/api/articles', articleRoutes);
 
-// Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
@@ -45,7 +41,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-// 404 handler
+
+
 app.use('*', (req, res) => {
   res.status(404).json({ 
     error: 'Route not found',
@@ -53,35 +50,36 @@ app.use('*', (req, res) => {
   });
 });
 
-// Global error handler
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  console.error('An unhandled error occurred:', err);
   
   const errorResponse = {
-    error: 'Internal server error',
+    error: 'Internal Server Error',
     message: config.errorHandling.showDetails ? err.message : 'Something went wrong'
   };
 
-  // Add stack trace in development
   if (config.errorHandling.showStack && config.env === 'development') {
     errorResponse.stack = err.stack;
   }
 
-  // Always use a numeric status code
   const statusCode = typeof err.statusCode === 'number' ? err.statusCode : 500;
   res.status(statusCode).json(errorResponse);
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
-  console.log(`📚 ${config.app.name} v${config.app.version}`);
-  console.log(`🌍 Environment: ${config.env}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  
-  if (config.app.debug) {
-    console.log(`🔧 Debug mode: ${config.app.debug}`);
-    console.log(`📝 Log level: ${config.app.logLevel}`);
-  }
-});
 
-module.exports = app; 
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server is running on port ${PORT}`);
+    console.log(`📚 ${config.app.name} v${config.app.version}`);
+    console.log(`🌍 Environment: ${config.env}`);
+    console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+    
+    if (config.app.debug) {
+      console.log(`🔧 Debug mode: ${config.app.debug}`);
+      console.log(`📝 Log level: ${config.app.logLevel}`);
+    }
+  });
+}
+
+module.exports = app;
