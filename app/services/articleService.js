@@ -4,19 +4,20 @@ const config = require('../../config');
 
 const genAI = new GoogleGenerativeAI(config.ai.apiKey);
 const PROMPTS = {
-  hindi: (title, description) => `आप एक विशेषज्ञ समाचार संपादक हैं। आपको दिए गए शीर्षक और विवरण के आधार पर, एक आकर्षक शीर्षक और एक संक्षिप्त, सारगर्भित सारांश हिंदी में तैयार करना है।
+  hindi: (title, description) => `आप एक विशेषज्ञ SEO और समाचार संपादक हैं। आपका कार्य दिए गए 'शीर्षक' और 'विवरण' को मिलाकर पूरी तरह से अपने शब्दों में एक नया, आकर्षक शीर्षक और सारगर्भित सारांश तैयार करना है।
 
 **निर्देश:**
 1.  प्रतिक्रिया केवल एक मान्य JSON ऑब्जेक्ट होनी चाहिए।
 2.  किसी भी तरह का मार्कडाउन, कोड ब्लॉक या अतिरिक्त टेक्स्ट न जोड़ें।
-3.  सारांश 50 से 60 शब्दों के बीच होना चाहिए और मुख्य बिंदुओं को उजागर करना चाहिए।
-4.  शीर्षक को मूल भाव बनाए रखते हुए अधिक आकर्षक बनाया जा सकता है।
-5.  प्रतिक्रिया का प्रारूप बिल्कुल इस तरह होना चाहिए:
+3.  **मूल विवरण से सीधे वाक्यांश या वाक्य कॉपी न करें।**
+4.  नया शीर्षक आकर्षक, SEO-अनुकूल (SEO-friendly) होना चाहिए और समाचार के मूल सार को प्रस्तुत करना चाहिए।
+5.  सारांश 50 से 60 शब्दों में, **आपके अपने शब्दों में लिखा जाना चाहिए**, जिसमें मूल शीर्षक और विवरण दोनों की मुख्य जानकारी शामिल हो।
+6.  प्रतिक्रिया का प्रारूप बिल्कुल इस तरह होना चाहिए:
 
 \`\`\`json
 {
-  "title": "<एक आकर्षक हिंदी शीर्षक>",
-  "summary": "<यहाँ हिंदी में 50-60 शब्दों का सारांश>"
+  "title": "<एक आकर्षक और अनूठा हिंदी शीर्षक>",
+  "summary": "<यहाँ हिंदी में 50-60 शब्दों का सारांश, पूरी तरह से अपने शब्दों में>"
 }
 \`\`\`
 
@@ -25,19 +26,20 @@ const PROMPTS = {
 **विवरण:** ${description}
 --- JSON प्रतिक्रिया ---`,
 
-  english: (title, description) => `You are an expert news editor. Based on the provided title and description, craft a compelling new title and a concise 50-60 word summary in English.
+  english: (title, description) => `You are an expert SEO and news editor. Your task is to synthesize the provided 'Title' and 'Description' into a completely new, paraphrased title and summary.
 
 **Instructions:**
 1.  Your output must be only a single, valid JSON object.
 2.  Do NOT include markdown, code blocks, or any other text outside the JSON.
-3.  The summary must be 50–60 words and capture the key points of the article.
-4.  Paraphrase the original content and title to be unique and engaging, avoiding plagiarism.
-5.  The response must exactly match this format:
+3.  **Do not copy phrases or sentences directly from the original description.**
+4.  The new title should be compelling, SEO-friendly, and capture the core essence of the news.
+5.  The summary must be a concise 50-60 words, **written in your own words**, that integrates the key information from both the original title and description.
+6.  The response must exactly match this format:
 
 \`\`\`json
 {
-  "title": "<A compelling, SEO-friendly title in English>",
-  "summary": "<A 50–60 word summary in English>"
+  "title": "<A compelling and unique SEO-friendly title in English>",
+  "summary": "<A 50–60 word summary in English, fully paraphrased>"
 }
 \`\`\`
 
