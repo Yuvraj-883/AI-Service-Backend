@@ -39,6 +39,35 @@ const summarizeArticle = async (req, res, next, language = 'english') => {
 };
 
 /**
+ * Summarize multiple long articles into a single consolidated news summary
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+const summarizeLongArticles = async (req, res, next) => {
+  try {
+    const { articles } = req.body;
+    const language = req.query.lang === 'hi' ? 'hindi' : 'english';
+    
+    if (!articles || !Array.isArray(articles) || articles.length === 0) {
+      throw new ApiError(400, 'Articles array is required and must contain at least one article');
+    }
+
+    const consolidatedSummary = await articleService.summarizeLongArticles(articles, language);
+    
+    res.status(200).json({
+      success: true,
+      message: `Long articles summarized successfully into consolidated summary in ${language}`,
+      data: consolidatedSummary,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Health check for article service
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -53,5 +82,6 @@ const healthCheck = (req, res) => {
 
 module.exports = {
   summarizeArticle,
+  summarizeLongArticles,
   healthCheck
 }; 

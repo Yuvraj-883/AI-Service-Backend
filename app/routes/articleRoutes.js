@@ -19,6 +19,10 @@ router.post('/summarize/:language', validateArticleInput, (req, res, next) => {
   }
 });
 
+// POST /api/articles/summarize-long?lang=en|hi
+// Summarize multiple long articles into a single consolidated news summary
+router.post('/summarize-long', articleController.summarizeLongArticles);
+
 // GET /api/articles/health
 router.get('/health', articleController.healthCheck);
 router.post('/ping', (req, res) => {

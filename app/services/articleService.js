@@ -80,8 +80,8 @@ function _parseJsonWithFallback(rawText) {
   } catch (err) {
     console.warn('❌ JSON.parse failed. Attempting regex fallback…');
     const match = cleanedText.match(/"title"\s*:\s*"([^"]+)"\s*,\s*"summary"\s*:\s*"([^"]+)"/i);
-    if (match && match && match) {
-      return { title: match.trim(), summary: match.trim() };
+    if (match && match[1] && match[2]) {
+      return { title: match[1].trim(), summary: match[2].trim() };
     }
     throw new Error('Failed to parse summary JSON from model response.');
   }
@@ -203,8 +203,122 @@ const validateApiKey = async () => {
   }
 };
 
+const LONG_ARTICLE_PROMPTS = {
+  hindi: (combinedContent) => `आप एक विशेषज्ञ समाचार संपादक हैं। निम्नलिखित लेखों को एक एकीकृत समाचार सारांश में संक्षेपित करें जो बिल्कुल 140-160 शब्दों में हो और सभी महत्वपूर्ण घटनाओं को कवर करे।
+
+**महत्वपूर्ण निर्देश:**
+1. केवल एक मान्य JSON ऑब्जेक्ट प्रदान करें
+2. कोई मार्कडाउन, कोड ब्लॉक या अतिरिक्त टेक्स्ट न जोड़ें
+3. सारांश बिल्कुल 180-200 शब्दों में होना चाहिए
+4. सभी लेखों की मुख्य जानकारी को एक साथ मिलाएं
+5. यदि लेख खाली या अपर्याप्त हैं, तो उपलब्ध जानकारी के साथ काम करें
+
+संक्षेपित करने वाले लेख:
+${combinedContent}
+
+केवल इस प्रारूप में JSON प्रतिक्रिया दें:
+{
+  "title": "<एकीकृत समाचार के लिए आकर्षक हिंदी शीर्षक>",
+  "summary": "<140-160 शब्दों में एकीकृत हिंदी सारांश>"
+}`,
+
+  english: (combinedContent) => `You are a professional news editor. Summarize the following articles into a single, cohesive news summary of exactly 140-160 words that captures all the important happenings.
+
+**Critical Instructions:**
+1. Provide only a valid JSON object
+2. Do NOT include markdown, code blocks, or any additional text
+3. Summary must be exactly 140-160 words
+4. Combine key information from all articles into one coherent narrative
+5. If articles are empty or insufficient, work with available information
+6. Handle duplicate information by mentioning it once
+7. Prioritize the most newsworthy events if content is extensive
+
+Articles to summarize:
+${combinedContent}
+
+Provide only a JSON response in this exact format:
+{
+  "title": "<A compelling headline for the consolidated news>",
+  "summary": "<140-160 word unified summary covering all important events>"
+}`
+};
+
+const summarizeLongArticles = async (articles, language = 'english', retryCount = 0) => {
+  const { maxRetries, retryDelay } = config.ai;
+  
+  try {
+    if (!articles || !Array.isArray(articles) || articles.length === 0) {
+      throw new Error('No articles provided for summarization');
+    }
+
+    const model = genAI.getGenerativeModel({ 
+      model: config.ai.model,
+      generationConfig: {
+        maxOutputTokens: config.ai.maxTokens,
+        temperature: config.ai.temperature,
+      }
+    });
+
+    // Combine all articles into a single content block
+    const combinedContent = articles.map((article, index) => {
+      const { title, description, content } = extractArticleContent(article);
+      let cleanContent = stripHtml(content || description || '');
+      if (!cleanContent.trim()) {
+        cleanContent = 'Content not available';
+      }
+      
+      if (cleanContent.length > 1000) {
+        cleanContent = cleanContent.substring(0, 1000) + '...';
+      }
+      
+      return `Article ${index + 1}: ${title}\n${cleanContent}`;
+    }).join('\n\n');
+
+    const prompt = LONG_ARTICLE_PROMPTS[language](combinedContent);
+    if (!prompt) {
+      throw new Error(`No prompt available for language: ${language}`);
+    }
+
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+
+    if (!response || !response.text) {
+      const finishReason = response?.promptFeedback?.blockReason || 'UNKNOWN_REASON';
+      throw new Error(`Content blocked by model: ${finishReason}`);
+    }
+
+    const rawText = response.text().trim();
+    if (!rawText || rawText.length < 10) {
+      throw new Error('Model returned empty or too-short response');
+    }
+
+    return _parseJsonWithFallback(rawText);
+
+  } catch (error) {
+    console.warn(`⚠️ Error on attempt ${retryCount + 1} for long articles summarization:`, error.message);
+
+    if (retryCount < maxRetries) {
+      console.log(`🔁 Retrying long articles summarization after ${retryDelay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      return summarizeLongArticles(articles, language, retryCount + 1);
+    }
+
+    // Fallback response for complete failure
+    const fallbackTitle = language === 'hindi' ? 'समाचार सारांश उपलब्ध नहीं' : 'News Summary Unavailable';
+    const fallbackSummary = language === 'hindi' 
+      ? 'तकनीकी समस्या के कारण समाचार सारांश तैयार नहीं किया जा सका।'
+      : 'News summary could not be generated due to technical issues.';
+    
+    return {
+      title: fallbackTitle,
+      summary: fallbackSummary
+    };
+  }
+};
+
 module.exports = {
   summarizeArticles,
   summarizeSingleArticle,
+  summarizeLongArticles,
   validateApiKey
 };
