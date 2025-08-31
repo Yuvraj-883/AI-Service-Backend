@@ -1,8 +1,11 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { VertexAI } = require('@google-cloud/vertexai');
 const { ApiError } = require('../utils/errorHandler');
 const config = require('../../config');
 
-const genAI = new GoogleGenerativeAI(config.ai.apiKey);
+const vertexAI = new VertexAI({
+  project: config.ai.projectId,
+  location: config.ai.location
+});
 const PROMPTS = {
   hindi: (title, description) => `आप एक विशेषज्ञ SEO और समाचार संपादक हैं। आपका कार्य दिए गए 'शीर्षक' और 'विवरण' को मिलाकर पूरी तरह से अपने शब्दों में एक नया, आकर्षक शीर्षक और सारगर्भित सारांश तैयार करना है।
 
@@ -34,7 +37,8 @@ const PROMPTS = {
 3.  **Do not copy phrases or sentences directly from the original description.**
 4.  The new title should be compelling, SEO-friendly, and capture the core essence of the news.
 5.  The summary must be a concise 50-60 words, **written in your own words**, that integrates the key information from both the original title and description.
-6.  The response must exactly match this format:
+6. You must paraphrase the title and description/content fully; avoid any direct quotations from the source.
+7.  The response must exactly match this format:
 
 \`\`\`json
 {
@@ -97,7 +101,7 @@ const summarizeSingleArticle = async (article, language = 'english', retryCount 
   } = config.ai;
 
   try {
-    const model = genAI.getGenerativeModel({ 
+    const model = vertexAI.getGenerativeModel({
       model: config.ai.model,
       generationConfig: {
         maxOutputTokens: config.ai.maxTokens,
@@ -137,7 +141,7 @@ const summarizeSingleArticle = async (article, language = 'english', retryCount 
     }
 
     const rawText = response.text().trim();
-    console.log('🧪 Gemini raw output:', rawText);
+    console.log('🧪 Vertex AI raw output:', rawText);
 
     if (!rawText || rawText.length < 10) {
       throw new Error('Model returned an empty or too-short response.');
@@ -191,14 +195,14 @@ const summarizeArticles = async (articles, language = 'english') => {
 
 const validateApiKey = async () => {
   try {
-    if (!config.ai.apiKey) {
-      throw new Error('Google API key is not configured');
+    if (!config.ai.projectId) {
+      throw new Error('Google Cloud Project ID is not configured');
     }
-    const model = genAI.getGenerativeModel({ model: config.ai.model });
+    const model = vertexAI.getGenerativeModel({ model: config.ai.model });
     await model.generateContent("Hello");
     return true;
   } catch (error) {
-    console.error('Google API key validation failed:', error.message);
+    console.error('Vertex AI validation failed:', error.message);
     return false;
   }
 };
@@ -251,7 +255,7 @@ const summarizeLongArticles = async (articles, language = 'english', retryCount 
       throw new Error('No articles provided for summarization');
     }
 
-    const model = genAI.getGenerativeModel({ 
+    const model = vertexAI.getGenerativeModel({
       model: config.ai.model,
       generationConfig: {
         maxOutputTokens: config.ai.maxTokens,
