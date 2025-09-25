@@ -1,14 +1,12 @@
 # AI Text Summarizer
 
-A Node.js API that uses Google Vertex AI to summarize articles. Send an array of articles and get back concise summaries.
+A Node.js API that uses Google Gemini to summarize articles. Send an array of articles and get back concise summaries.
 
 ## Quick Start
 
 1. Install dependencies: `npm install`
-2. Set up Google Cloud credentials:
-   - Create a Google Cloud project
-   - Enable the Vertex AI API
-   - Create a service account and download the JSON key
+2. Set up Gemini API:
+   - Get a Gemini API key from Google AI Studio
    - Set environment variables in `.env`
 3. Run: `npm run dev`
 
@@ -17,9 +15,7 @@ A Node.js API that uses Google Vertex AI to summarize articles. Send an array of
 Copy `env.example` to `.env` and configure:
 
 ```env
-GOOGLE_CLOUD_PROJECT_ID=your_project_id_here
-GOOGLE_CLOUD_LOCATION=us-central1
-GOOGLE_APPLICATION_CREDENTIALS=path/to/service-account-key.json
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
 ## API
@@ -42,7 +38,7 @@ Send articles and get summaries back.
 ## Tech Stack
 
 - Node.js + Express
-- Google Vertex AI
+- Google Gemini
 - Environment-based configuration
 - Rate limiting & security
 
