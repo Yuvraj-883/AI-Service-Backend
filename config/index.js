@@ -45,8 +45,9 @@ const config = {
   
   // AI Configuration
   ai: {
-    apiKey: process.env.GOOGLE_API_KEY,
-    model: process.env.AI_MODEL || 'gemini-2.5-flash',
+    projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+    location: process.env.GOOGLE_CLOUD_LOCATION || 'us-central1',
+    model: process.env.AI_MODEL || 'gemini-1.5-flash',
     maxTokens: parseInt(process.env.AI_MAX_TOKENS) || 5000,
     temperature: parseFloat(process.env.AI_TEMPERATURE) || 0.7,
     timeout: parseInt(process.env.AI_TIMEOUT) || 
