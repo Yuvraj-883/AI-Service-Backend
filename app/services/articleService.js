@@ -184,6 +184,52 @@ const summarizeArticles = async (articles, language = 'english') => {
   }
 };
 
+const summarizeLongArticles = async (articles, language = 'english') => {
+  try {
+    const combinedContent = articles.map((article, index) => {
+      const { title, description, content } = extractArticleContent(article);
+      const cleanContent = stripHtml(description || content);
+      return `Article ${index + 1}:\nTitle: ${title}\nContent: ${cleanContent.substring(0, 2000)}`;
+    }).join('\n\n');
+
+    const prompt = language === 'hindi' ? 
+      `आप एक विशेषज्ञ समाचार संपादक हैं। निम्नलिखित लेखों को एक एकीकृत समाचार सारांश में संक्षेपित करें जो बिल्कुल 140-160 शब्दों में हो।
+
+${combinedContent}
+
+केवल JSON प्रारूप में उत्तर दें:
+{
+  "title": "<एकीकृत शीर्षक>",
+  "summary": "<140-160 शब्दों का सारांश>"
+}` :
+      `You are a professional news editor. Summarize the following articles into a single, cohesive news summary of exactly 140-160 words.
+
+${combinedContent}
+
+Provide only a JSON response:
+{
+  "title": "<Consolidated headline>",
+  "summary": "<140-160 word unified summary>"
+}`;
+
+    const model = genAI.getGenerativeModel({ 
+      model: config.ai.model,
+      generationConfig: {
+        maxOutputTokens: config.ai.maxTokens,
+        temperature: config.ai.temperature,
+      }
+    });
+
+    const result = await model.generateContent(prompt);
+    const rawText = result.response.text().trim();
+    
+    return _parseJsonWithFallback(rawText);
+  } catch (error) {
+    console.error('Error in long articles summarization:', error);
+    throw new ApiError(500, 'Failed to summarize long articles');
+  }
+};
+
 const validateApiKey = async () => {
   try {
     if (!config.ai.apiKey) {
@@ -200,5 +246,7 @@ const validateApiKey = async () => {
 
 module.exports = {
   summarizeArticles,
+  summarizeSingleArticle,
+  summarizeLongArticles,
   validateApiKey
 };
