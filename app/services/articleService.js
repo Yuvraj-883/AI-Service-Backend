@@ -12,7 +12,7 @@ const PROMPTS = {
 2.  किसी भी तरह का मार्कडाउन, कोड ब्लॉक या अतिरिक्त टेक्स्ट न जोड़ें।
 3.  **मूल विवरण से सीधे वाक्यांश या वाक्य कॉपी न करें।**
 4.  नया शीर्षक आकर्षक, SEO-अनुकूल (SEO-friendly) होना चाहिए और समाचार के मूल सार को प्रस्तुत करना चाहिए।
-5.  सारांश **बिल्कुल 80-100 शब्दों में** होना चाहिए, **आपके अपने शब्दों में लिखा जाना चाहिए**, जिसमें मूल शीर्षक और विवरण दोनों की मुख्य जानकारी शामिल हो। 80 शब्दों से कम या 100 शब्दों से ज्यादा न लिखें।
+5.  सारांश **बिल्कुल 80-100 शब्दों में** होना चाहिए, **आपके अपने शब्दों में लिखा जाना चाहिए**, जिसमें मूल शीर्षक और विवरण दोनों की मुख्य जानकारी शामिल हो। 80 शब्दों से कम या 90 शब्दों से ज्यादा न लिखें।
 6.  आपको शीर्षक और विवरण/सामग्री को पूरी तरह से अपने शब्दों में पुनः प्रस्तुत करना होगा; स्रोत से कोई भी प्रत्यक्ष उद्धरण से बचें।
 7.  प्रतिक्रिया का प्रारूप बिल्कुल इस तरह होना चाहिए:
 
@@ -35,7 +35,7 @@ const PROMPTS = {
 2.  Do NOT include markdown, code blocks, or any other text outside the JSON.
 3.  **Do not copy phrases or sentences directly from the original description.**
 4.  The new title should be compelling, SEO-friendly, and capture the core essence of the news.
-5.  The summary must be **exactly 80-100 words**, **written in your own words**, that integrates the key information from both the original title and description. Do not write less than 80 words or more than 100 words.
+5.  The summary must be **exactly 80-90 words**, **written in your own words**, that integrates the key information from both the original title and description. Do not write less than 80 words or more than 100 words.
 6. You must paraphrase the title and description/content fully; avoid any direct quotations from the source.
 7.  The response must exactly match this format:
 
