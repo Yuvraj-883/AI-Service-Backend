@@ -49,14 +49,10 @@ const config = {
     model: process.env.AI_MODEL || 'gemini-2.5-flash',
     maxTokens: parseInt(process.env.AI_MAX_TOKENS) || 5000,
     temperature: parseFloat(process.env.AI_TEMPERATURE) || 0.7,
-    timeout: parseInt(process.env.AI_TIMEOUT) || 
-             env === 'development' ? 30000 :
-             env === 'staging' ? 45000 :
-             env === 'production' ? 60000 : 30000,
-    retryAttempts: parseInt(process.env.AI_RETRY_ATTEMPTS) || 
-                   env === 'development' ? 3 :
-                   env === 'staging' ? 2 :
-                   env === 'production' ? 1 : 1
+    maxRetries: parseInt(process.env.AI_MAX_RETRIES) || 3,
+    minContentLength: parseInt(process.env.AI_MIN_CONTENT_LENGTH) || 50,
+    maxInputLength: parseInt(process.env.AI_MAX_INPUT_LENGTH) || 8000,
+    retryDelay: parseInt(process.env.AI_RETRY_DELAY) || 1000
   },
   
   // Security settings
