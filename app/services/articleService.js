@@ -5,21 +5,21 @@ const config = require('../../config');
 const genAI = new GoogleGenerativeAI(config.ai.apiKey);
 
 const PROMPTS = {
-  hindi: (title, description) => `आप एक विशेषज्ञ SEO और समाचार संपादक हैं। आपका कार्य दिए गए 'शीर्षक' और 'विवरण' को मिलाकर पूरी तरह से अपने शब्दों में एक नया, आकर्षक शीर्षक और सारगर्भित सारांश तैयार करना है।
+  hindi: (title, description, wordLimit = '60-80') => `आप एक विशेषज्ञ SEO और समाचार संपादक हैं। आपका कार्य दिए गए 'शीर्षक' और 'विवरण' को मिलाकर पूरी तरह से अपने शब्दों में एक नया, आकर्षक शीर्षक और सारगर्भित सारांश तैयार करना है।
 
 **निर्देश:**
 1.  प्रतिक्रिया केवल एक मान्य JSON ऑब्जेक्ट होनी चाहिए।
 2.  किसी भी तरह का मार्कडाउन, कोड ब्लॉक या अतिरिक्त टेक्स्ट न जोड़ें।
 3.  **मूल विवरण से सीधे वाक्यांश या वाक्य कॉपी न करें।**
-4.  नया शीर्षक आकर्षक, SEO-अनुकूल (SEO-friendly) होना चाहिए और समाचार के मूल सार को प्रस्तुत करना चाहिए।
-5.  सारांश **बिल्कुल 80-100 शब्दों में** होना चाहिए, **आपके अपने शब्दों में लिखा जाना चाहिए**, जिसमें मूल शीर्षक और विवरण दोनों की मुख्य जानकारी शामिल हो। 80 शब्दों से कम या 90 शब्दों से ज्यादा न लिखें।
+4.  नया शीर्षक आकर्षक, SEO-अनुकूल (SEO-friendly) होना चाहिए, **अधिकतम 90 अक्षरों में** होना चाहिए और समाचार के मूल सार को प्रस्तुत करना चाहिए।
+5.  सारांश **बिल्कुल ${wordLimit} शब्दों में** होना चाहिए, **आपके अपने शब्दों में लिखा जाना चाहिए**, जिसमें मूल शीर्षक और विवरण दोनों की मुख्य जानकारी शामिल हो। 80 शब्दों से कम या 90 शब्दों से ज्यादा न लिखें।
 6.  आपको शीर्षक और विवरण/सामग्री को पूरी तरह से अपने शब्दों में पुनः प्रस्तुत करना होगा; स्रोत से कोई भी प्रत्यक्ष उद्धरण से बचें।
-7.  प्रतिक्रिया का प्रारूप बिल्कुल इस तरह होना चाहिए:
+7.  **20 सेकंड के अंदर तुरंत उत्तर दें।** प्रतिक्रिया का प्रारूप बिल्कुल इस तरह होना चाहिए:
 
 \`\`\`json
 {
   "title": "<एक आकर्षक और अनूठा हिंदी शीर्षक>",
-  "summary": "<यहाँ हिंदी में बिल्कुल 80-100 शब्दों का सारांश, पूरी तरह से अपने शब्दों में>"
+  "summary": "<यहाँ हिंदी में बिल्कुल ${wordLimit} शब्दों का सारांश, पूरी तरह से अपने शब्दों में>"
 }
 \`\`\`
 
@@ -28,21 +28,21 @@ const PROMPTS = {
 **विवरण:** ${description}
 --- JSON प्रतिक्रिया ---`,
 
-  english: (title, description) => `You are an expert SEO and news editor. Your task is to synthesize the provided 'Title' and 'Description' into a completely new, paraphrased title and summary.
+  english: (title, description, wordLimit = '60-80') => `You are an expert SEO and news editor. Your task is to synthesize the provided 'Title' and 'Description' into a completely new, paraphrased title and summary.
 
 **Instructions:**
 1.  Your output must be only a single, valid JSON object.
 2.  Do NOT include markdown, code blocks, or any other text outside the JSON.
 3.  **Do not copy phrases or sentences directly from the original description.**
-4.  The new title should be compelling, SEO-friendly, and capture the core essence of the news.
-5.  The summary must be **exactly 80-90 words**, **written in your own words**, that integrates the key information from both the original title and description. Do not write less than 80 words or more than 100 words.
+4.  The new title should be compelling, SEO-friendly, **maximum 90 characters long**, and capture the core essence of the news.
+5.  The summary must be **exactly ${wordLimit} words**, **written in your own words**, that integrates the key information from both the original title and description. Do not write less than 80 words or more than 100 words.
 6. You must paraphrase the title and description/content fully; avoid any direct quotations from the source.
-7.  The response must exactly match this format:
+7.  **Respond immediately within 20 seconds.** The response must exactly match this format:
 
 \`\`\`json
 {
   "title": "<A compelling and unique SEO-friendly title in English>",
-  "summary": "<Exactly 80-100 word summary in English, fully paraphrased>"
+  "summary": "<Exactly ${wordLimit} word summary in English, fully paraphrased>"
 }
 \`\`\`
 
@@ -87,7 +87,7 @@ function _parseJsonWithFallback(rawText) {
   }
 }
 
-const summarizeSingleArticle = async (article, language = 'english', retryCount = 0) => {
+const summarizeSingleArticle = async (article, language = 'english', wordLimit = '80-100', retryCount = 0) => {
   const { 
     maxRetries, 
     minContentLength, 
@@ -120,12 +120,17 @@ const summarizeSingleArticle = async (article, language = 'english', retryCount 
     
     const truncatedContent = cleanContent.substring(0, maxInputLength);
 
-    const prompt = PROMPTS[language](title, truncatedContent);
+    const prompt = PROMPTS[language](title, truncatedContent, wordLimit);
     if (!prompt) {
       throw new Error(`No prompt available for the selected language: "${language}"`);
     }
     
-    const result = await model.generateContent(prompt);
+  
+    
+    const result = await Promise.race([
+      model.generateContent(prompt),
+      timeoutPromise
+    ]);
     const response = result.response;
 
     if (!response || !response.text) {
@@ -148,7 +153,7 @@ const summarizeSingleArticle = async (article, language = 'english', retryCount 
     if (retryCount < maxRetries) {
       console.log(`🔁 Retrying summarization for "${articleTitle}" after ${retryDelay}ms...`);
       await new Promise(resolve => setTimeout(resolve, retryDelay));
-      return summarizeSingleArticle(article, language, retryCount + 1);
+      return summarizeSingleArticle(article, language, wordLimit, retryCount + 1);
     }
 
     return {
@@ -158,10 +163,10 @@ const summarizeSingleArticle = async (article, language = 'english', retryCount 
   }
 };
 
-const summarizeArticles = async (articles, language = 'english') => {
+const summarizeArticles = async (articles, language = 'english', wordLimit = '80-100') => {
   try {
     const summarizationPromises = articles.map(article => 
-      summarizeSingleArticle(article, language)
+      summarizeSingleArticle(article, language, wordLimit)
     );
     const results = await Promise.allSettled(summarizationPromises);
     

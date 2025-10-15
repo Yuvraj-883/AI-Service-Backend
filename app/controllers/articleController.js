@@ -10,7 +10,7 @@ const { ApiError } = require('../utils/errorHandler');
  */
 const summarizeArticle = async (req, res, next, language = 'english') => {
   try {
-    const {article} = req.body;
+    const {article, wordLimit} = req.body;
     
     if (!article || typeof article !== 'object') {
       throw new ApiError(400, 'Article object is required in request body');
@@ -24,7 +24,7 @@ const summarizeArticle = async (req, res, next, language = 'english') => {
       throw new ApiError(400, 'Article must have a description field (description, sDescription, sContent, or content)');
     }
 
-    const summarizedArticle = await articleService.summarizeSingleArticle(article, language);
+    const summarizedArticle = await articleService.summarizeSingleArticle(article, language, wordLimit || '80-100');
     
     res.status(200).json({
       success: true,
@@ -46,14 +46,14 @@ const summarizeArticle = async (req, res, next, language = 'english') => {
  */
 const summarizeLongArticles = async (req, res, next) => {
   try {
-    const { articles } = req.body;
+    const { articles, wordLimit } = req.body;
     const language = req.query.lang === 'hi' ? 'hindi' : 'english';
     
     if (!articles || !Array.isArray(articles) || articles.length === 0) {
       throw new ApiError(400, 'Articles array is required and must contain at least one article');
     }
 
-    const consolidatedSummary = await articleService.summarizeLongArticles(articles, language);
+    const consolidatedSummary = await articleService.summarizeLongArticles(articles, language, wordLimit || '140-160');
     
     res.status(200).json({
       success: true,
